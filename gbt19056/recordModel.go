@@ -2,18 +2,17 @@ package gbt19056
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/leegggg/GBT19056-2020Gen/utils/bcd"
 	"github.com/leegggg/GBT19056-2020Gen/utils/encode"
 )
 
 // LengthMetadata ...
-const LengthMetadata = 23
+const LengthMetadata = 6
 
 // PositionMultiplier ...
 const PositionMultiplier = 10000.0 * 60
@@ -42,137 +41,6 @@ func (sd *HexUint8) MarshalJSON() ([]byte, error) {
 		stamp = fmt.Sprintf("\"0x%02x\"", uint8(*sd))
 	}
 	return []byte(stamp), nil
-}
-
-// DateTime ...
-type DateTime struct {
-	time.Time
-}
-
-// DumpData DateTime
-func (e *DateTime) DumpData() ([]byte, error) {
-	bs := make([]byte, 6)
-	if e.Year() < 2000 || e.Year() > 2099 {
-		err := fmt.Errorf("year %d not in range [2000-2099]", e.Year())
-		return bs, err
-	}
-
-	var nb uint8
-	nb = uint8(e.Year() - 2000)
-	bs[0] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Month())
-	bs[1] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Day())
-	bs[2] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Hour())
-	bs[3] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Minute())
-	bs[4] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Second())
-	bs[5] = bcd.FromUint8(nb)
-	return bs, nil
-}
-
-// LoadBinary RealTime Table A.8, Code 0x02
-func (e *DateTime) LoadBinary(buffer []byte) {
-	year := bcd.ToUint8(buffer[0])
-	month := bcd.ToUint8(buffer[1])
-	day := bcd.ToUint8(buffer[2])
-	hour := bcd.ToUint8(buffer[3])
-	min := bcd.ToUint8(buffer[4])
-	sec := bcd.ToUint8(buffer[5])
-	e.Time = time.Date(
-		int(year)+2000, time.Month(int(month)), int(day), int(hour), int(min), int(sec), 0, time.UTC)
-}
-
-// LoadBinaryShort RealTime Table A.14
-func (e *DateTime) LoadBinaryShort(buffer []byte) {
-	year := bcd.ToUint8(buffer[0])
-	month := bcd.ToUint8(buffer[1])
-	day := bcd.ToUint8(buffer[2])
-
-	e.Time = time.Date(
-		int(year)+2000, time.Month(int(month)), int(day), 0, 0, 0, 0, time.UTC)
-}
-
-// DumpDataShort DateTime
-func (e *DateTime) DumpDataShort() ([]byte, error) {
-	bs := make([]byte, 3)
-	if e.Year() < 2000 || e.Year() > 2099 {
-		err := fmt.Errorf("Year %d not in range [2000-2099]", e.Year())
-		return bs, err
-	}
-
-	var nb uint8
-	nb = uint8(e.Year() - 2000)
-	bs[0] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Month())
-	bs[1] = bcd.FromUint8(nb)
-
-	nb = uint8(e.Day())
-	bs[2] = bcd.FromUint8(nb)
-
-	return bs, nil
-}
-
-// Status ...
-type Status [8]bool
-
-// DumpData DateTime
-func (e *Status) DumpData() (byte, error) {
-	var bs byte
-	bs = 0x00
-	if len(*e) > 8 {
-		return bs, fmt.Errorf("Status array too long")
-	}
-	// Set bitmap
-	for index, bit := range *e {
-		if bit {
-			bs |= 1 << index
-		}
-	}
-	return bs, nil
-}
-
-// LoadBinary Status Table A.8, Code 0x02
-func (e *Status) LoadBinary(buffer byte) {
-	for i := 0; i < 8; i++ {
-		if (buffer & (1 << i)) == 0 {
-			e[i] = false
-		} else {
-			e[i] = true
-		}
-	}
-}
-
-// SpeedStatus ...
-type SpeedStatus struct {
-	Speed  uint8  `json:"speed"`
-	Status Status `json:"status"`
-}
-
-// LengthSpeedStatus ...
-const LengthSpeedStatus = 2
-
-// DumpData SpeedStatus
-func (e *SpeedStatus) DumpData() ([]byte, error) {
-	bs := make([]byte, 2)
-	bs[0] = e.Speed
-	status, _ := e.Status.DumpData()
-	bs[1] = status
-	return bs, nil
-}
-
-// LoadBinary SpeedStatus
-func (e *SpeedStatus) LoadBinary(buffer []byte) {
-	e.Speed = buffer[0]
-	e.Status.LoadBinary(buffer[1])
 }
 
 // Position ...
@@ -217,25 +85,25 @@ func (e *Position) DumpData() ([]byte, error) {
 
 	}
 
-	copy(bs[0:4], encoding.Int32ToBytes(latitude))
-	copy(bs[4:8], encoding.Int32ToBytes(longitude))
-	copy(bs[8:], encoding.Int16ToBytes(elevation))
+	copy(bs[0:4], encode.Int32ToBytes(latitude))
+	copy(bs[4:8], encode.Int32ToBytes(longitude))
+	copy(bs[8:], encode.Int16ToBytes(elevation))
 	return bs, nil
 }
 
 // LoadBinary ...
 func (e *Position) LoadBinary(buffer []byte) {
 	// Table A.20
-	e.Longitude = float64(encoding.BytesToInt32(buffer[0:4])) / PositionMultiplier
-	e.Latitude = float64(encoding.BytesToInt32(buffer[4:8])) / PositionMultiplier
-	e.Elevation = float64(encoding.BytesToInt16(buffer[8:10]))
+	e.Longitude = float64(encode.BytesToInt32(buffer[0:4])) / PositionMultiplier
+	e.Latitude = float64(encode.BytesToInt32(buffer[4:8])) / PositionMultiplier
+	e.Elevation = float64(encode.BytesToInt16(buffer[8:10]))
 	return
 }
 
 // dataBlockMeta ...
 type dataBlockMeta struct {
-	CodeM HexUint8 `json:"syn_b1"` // need decode from 0x01 ...
-	CodeS HexUint8 `json:"syn_b2"` // need decode from 0x01 ...
+	SynB1 HexUint8 `json:"syn_b1"` // need decode from 0x01 ...
+	SynB2 HexUint8 `json:"syn_b2"` // need decode from 0x01 ...
 	FmtM  HexUint8 `json:"mfmt"`   // need decode from 0x01 ...
 	FmtS  HexUint8 `json:"sfmt"`   // need decode from 0x01 ...
 	Size  uint32   `json:"size"`
@@ -243,34 +111,53 @@ type dataBlockMeta struct {
 
 // DumpDate ...
 func (e *dataBlockMeta) DumpData() ([]byte, error) {
-	bs := make([]byte, 19)
-	bs[0] = (byte)(e.Code)
-	sub := bs[1:]
-	name, _ := encoding.EncodeGBK(([]byte)(e.Name))
-	copy(sub, name)
+	bs := make([]byte, 6)
+	bs[0] = (byte)(e.SynB1)
+	bs[1] = (byte)(e.SynB2)
+	bs[2] = (byte)(e.FmtM)
+	bs[3] = (byte)(e.FmtS)
+	size := e.Size / 16
+	if e.Size%16 != 0 {
+		return nil, errors.New("size is not in 16B, padding maybe needed")
+	}
+
+	binary.BigEndian.PutUint16(bs[4:], (uint16)(size))
 	return bs, nil
 }
 
-// DumpDate ...
+// LoadDate return datablock size
 func (e *dataBlockMeta) LoadBinary(buffer []byte) (int, error) {
 	// Table B.2
 	var err error
-	var name string
-	dataLength := LengthMetadata
-	e.Code = HexUint8(buffer[0])
-	name, err = encoding.DecodeGBKStr(buffer[1:19])
-	e.Name = name
-	dataLength += int(binary.BigEndian.Uint32(buffer[19:23]))
-	return dataLength, err
+	e.SynB1 = HexUint8(buffer[0])
+	e.SynB2 = HexUint8(buffer[1])
+	e.FmtM = HexUint8(buffer[2])
+	e.FmtS = HexUint8(buffer[3])
+	e.Size = (uint32)(binary.BigEndian.Uint16(buffer[4:6])) * 16
+	return int(e.Size), err
+}
+
+func addPaddingBytes(body []byte) ([]byte, error) {
+	totalLength := len(body) + LengthMetadata
+	paddingLength := (totalLength/16+1)*16 - totalLength
+	return append(body, make([]byte, paddingLength)...), nil
+}
+
+func calcXorSum(body []byte) (byte, error) {
+	var sum byte = 97
+	for _, v := range body {
+		sum ^= v
+	}
+	return sum, nil
 }
 
 // linkDumpedData
 func (e dataBlockMeta) linkDumpedData(body []byte) ([]byte, error) {
+	body, _ = addPaddingBytes(body)
+	sum, _ := calcXorSum(body)
+	body[len(body)-1] = sum
+	e.Size = (uint32)(len(body))
 	meta, err := e.DumpData()
-	// Data Length
-	dataLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(dataLength, (uint32)(len(body)))
-	meta = append(meta, dataLength...)
 	bs := append(meta, body...)
 	return bs, err
 }
