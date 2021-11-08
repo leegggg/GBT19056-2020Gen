@@ -3,11 +3,6 @@ package gbt19056
 // OvertimeLog ..
 type OvertimeLog struct {
 	dataBlockMeta
-	Records []OvertimeLogRecord `json:"records"`
-}
-
-// OvertimeLogRecord ...
-type OvertimeLogRecord struct {
 	DriverID      string   `json:"driver_id"`
 	Start         DateTime `json:"start,string"`
 	End           DateTime `json:"end,string"`

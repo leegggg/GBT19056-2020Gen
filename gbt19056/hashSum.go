@@ -3,25 +3,17 @@ package gbt19056
 import "encoding/binary"
 
 // RecoderID ..
-type Header struct {
+type HashSum struct {
 	dataBlockMeta
-	Year         uint16    `json:"year"`
-	Filename     string    `json:"filename"`
-	CreateTime   DateTime  `json:"create_time"`
-	Size         uint32    `json:"size"`
-	Description  string    `json:"description"`
-	RecoderID    RecoderID `json:"recoder_id"`
-	Plate        string    `json:"plate"`
-	PlateType    string    `json:"plate_type"`
-	VIN          string    `json:"vin"`
-	Sn           uint64    `json:"sn"`
-	PulseFactor  uint16    `json:"pulse_factor"`
-	Installation DateTime  `json:"dop,string"`
-	HashSum      []uint8   `json:"hash_sum"`
+	Ts        DateTime `json:"ts"`
+	Algorithm HexUint8 `json:"algorithm"`
+	Count     uint16   `json:"count"`
+	Size      uint16   `json:"size"`
+	HashSum   []uint8  `json:"hash_sum"`
 }
 
 // DumpData RecoderID
-func (e *Header) DumpData() ([]byte, error) {
+func (e *HashSum) DumpData() ([]byte, error) {
 	var err error
 
 	// ASCII ID should be safe to be copy directly
@@ -52,7 +44,7 @@ func (e *Header) DumpData() ([]byte, error) {
 }
 
 // LoadBinary RecoderID Table A.11, Code 0x08
-func (e *Header) LoadBinary(buffer []byte, meta dataBlockMeta) {
+func (e *HashSum) LoadBinary(buffer []byte, meta dataBlockMeta) {
 	e.dataBlockMeta = meta
 	e.CCC = bytesToStr(buffer[0:7])
 	e.Version = bytesToStr(buffer[7:23])

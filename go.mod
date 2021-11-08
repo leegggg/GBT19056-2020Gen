@@ -1,4 +1,4 @@
-module github.com/leegggg/GBT19056Gen
+module github.com/leegggg/GBT19056-2020Gen
 
 go 1.13
 

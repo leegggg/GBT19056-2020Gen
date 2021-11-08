@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/leegggg/GBT19056Gen/gbt19056"
+	"github.com/leegggg/GBT19056-2020Gen/gbt19056"
 )
 
 func jsonToBinary() {
